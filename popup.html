@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Cookie Coding Planner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Cookie Coding Planner</h1>
+
+  <label>Project Level</label>
+  <select id="quality">
+    <option value="functional">Functional Project</option>
+    <option value="intermediate">Intermediate Project</option>
+    <option value="verygood">Very Good Project</option>
+  </select>
+
+  <label>Number of Cookies</label>
+  <input type="number" id="cookies" placeholder="Enter cookies">
+
+  <button id="setPlan">Set / Update Plan</button>
+
+  <div class="info">
+    <p>Total Coding Hours Needed To Accomplish your Goal: <span id="totalHours">0</span></p>
+    <p>Days left till 29 March: <span id="daysLeft">0</span></p>
+    <p>Daily Target: <span id="dailyTarget">0</span> hrs</p>
+  </div>
+
+  <hr>
+
+  <label>Hours coded today</label>
+  <input type="number" id="todayHours" placeholder="Today's hours">
+
+  <button id="updateProgress">Update Progress</button>
+
+  <div class="status">
+    <img id="statusIcon" />
+    <div id="result"></div>
+  </div>
+
+  <script src="assets.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
