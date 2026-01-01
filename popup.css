@@ -1,0 +1,73 @@
+body {
+  font-family: Arial, sans-serif;
+  width: 300px;
+  padding: 12px;
+  margin: 0;
+  background: linear-gradient(135deg, #0f172a, #020617);
+  color: #e5e7eb;
+}
+
+h3 {
+  margin: 0 0 10px 0;
+  color: #facc15;
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  border-radius: 6px;
+  border: none;
+  outline: none;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+input::placeholder {
+  color: #94a3b8;
+}
+
+button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  border-radius: 6px;
+  border: none;
+  background: #22c55e;
+  color: #020617;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #16a34a;
+}
+
+#apiScreen,
+#main {
+  animation: fadeIn 0.4s ease-in;
+}
+
+#timeDisplay {
+  margin-top: 14px;
+  padding: 10px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  background: #020617;
+  border-radius: 6px;
+  color: #38bdf8;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

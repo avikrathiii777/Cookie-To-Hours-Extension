@@ -1,112 +1,133 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  // -------- SAFE ELEMENT GETTER --------
-  function el(id) {
-    return document.getElementById(id);
+  const cookiesInput = document.getElementById("cookies");
+  const levelSelect = document.getElementById("level");
+  const setPlanBtn = document.getElementById("setPlan");
+
+  const todayTimeEl = document.getElementById("todayTime");
+  const statsEl = document.getElementById("stats");
+
+  const addHourBtn = document.getElementById("addHour");
+  const addMinuteBtn = document.getElementById("addMinute");
+  const confirmBtn = document.getElementById("confirm");
+  const undoBtn = document.getElementById("undo");
+  const resetBtn = document.getElementById("reset");
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const deadline = new Date("2026-03-29");
+
+  let tempSeconds = 0;
+  let lastAdded = 0;
+
+  function format(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return `${h} hr ${m} min`;
   }
 
-  const cookiesInput   = el("cookies");
-  const levelSelect    = el("quality");
-  const todayHoursIn   = el("todayHours");
+  function formatHours(hours) {
+    const totalMinutes = Math.ceil(hours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h} hr ${m} min`;
+  }
 
-  const setPlanBtn     = el("setPlan");
-  const updateBtn      = el("updateProgress");
-
-  const totalHoursEl   = el("totalHours");
-  const daysLeftEl     = el("daysLeft");
-  const dailyTargetEl = el("dailyTarget");
-  const resultDiv      = el("result");
-  const statusIcon     = el("statusIcon");
-
-  // -------- FALLBACK IF assets.js FAILS --------
-  const SAFE_ICONS = (typeof ICONS !== "undefined") ? ICONS : {
-    warning: "",
-    success: "",
-    perfect: ""
-  };
-
-  let remainingHours = 0;
-
-  // -------- DATE LOGIC (NEXT 29 MARCH) --------
-  function daysLeftTillMarch29() {
+  function daysLeft() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    let year = today.getFullYear();
-    let end = new Date(year, 2, 29);
-    end.setHours(0, 0, 0, 0);
-
-    if (today > end) {
-      end = new Date(year + 1, 2, 29);
-      end.setHours(0, 0, 0, 0);
-    }
-
-    const diff = end - today;
-    const oneDay = 1000 * 60 * 60 * 24;
-
-    return diff <= 0 ? 0 : Math.ceil(diff / oneDay);
+    return Math.max(1, Math.ceil((deadline - today) / 86400000));
   }
 
-  // -------- COOKIE → HOURS --------
-  function calculateTotalHours(cookies, level) {
-    if (level === "functional") return cookies / 10;
-    if (level === "intermediate") return cookies / 20;
-    if (level === "verygood") return cookies / 30;
-    return 0;
+  function loadToday(cb) {
+    chrome.storage.local.get(todayKey, d => cb(d[todayKey] || 0));
   }
 
-  // -------- SET PLAN --------
-  setPlanBtn.addEventListener("click", () => {
+  function renderTemp(base) {
+    todayTimeEl.textContent = format(base + tempSeconds);
+  }
+
+  function saveToday(sec) {
+    chrome.storage.local.set({ [todayKey]: sec });
+    updateStats();
+  }
+
+  function updateStats() {
+    chrome.storage.local.get(["cookies", "divider"], data => {
+      if (!data.cookies || !data.divider) {
+        statsEl.innerHTML = "";
+        return;
+      }
+
+      const totalHours = data.cookies / data.divider;
+      const dailyTarget = totalHours / daysLeft();
+
+      loadToday(sec => {
+        const todayHours = sec / 3600;
+        let status = "➖ On Track";
+
+        if (todayHours > dailyTarget) status = "✅ Ahead";
+        else if (todayHours < dailyTarget) status = "⚠️ Behind";
+
+        statsEl.innerHTML = `
+          <p>Total Target: ${Math.floor(totalHours)} hrs</p>
+          <p>Days Left: ${daysLeft()}</p>
+          <p>Daily Target: ${formatHours(dailyTarget)}</p>
+          <p>Status: ${status}</p>
+        `;
+      });
+    });
+  }
+
+  loadToday(sec => {
+    tempSeconds = 0;
+    renderTemp(sec);
+  });
+
+  addHourBtn.onclick = () => {
+    tempSeconds += 3600;
+    lastAdded = 3600;
+    loadToday(renderTemp);
+  };
+
+  addMinuteBtn.onclick = () => {
+    tempSeconds += 600;
+    lastAdded = 600;
+    loadToday(renderTemp);
+  };
+
+  undoBtn.onclick = () => {
+    tempSeconds = Math.max(0, tempSeconds - lastAdded);
+    lastAdded = 0;
+    loadToday(renderTemp);
+  };
+
+  confirmBtn.onclick = () => {
+    loadToday(sec => {
+      const newTotal = sec + tempSeconds;
+      saveToday(newTotal);
+      tempSeconds = 0;
+      lastAdded = 0;
+      todayTimeEl.textContent = format(newTotal);
+    });
+  };
+
+  resetBtn.onclick = () => {
+    chrome.storage.local.set({ [todayKey]: 0 }, () => {
+      tempSeconds = 0;
+      lastAdded = 0;
+      todayTimeEl.textContent = "0 hr 0 min";
+      updateStats();
+    });
+  };
+
+  setPlanBtn.onclick = () => {
     const cookies = Number(cookiesInput.value);
+    const divider = Number(levelSelect.value);
+    if (!cookies) return;
 
-    if (!cookies || cookies <= 0) {
-      resultDiv.textContent = "Enter a valid cookie number.";
-      return;
-    }
+    chrome.storage.local.set({ cookies, divider }, updateStats);
+  };
 
-    remainingHours = calculateTotalHours(cookies, levelSelect.value);
-
-    const days = daysLeftTillMarch29();
-    const dailyTarget = days > 0 ? (remainingHours / days) : remainingHours;
-
-    totalHoursEl.textContent   = remainingHours.toFixed(2);
-    daysLeftEl.textContent     = days;
-    dailyTargetEl.textContent  = dailyTarget.toFixed(2);
-
-    resultDiv.textContent = "Plan set successfully.";
-    statusIcon.src = SAFE_ICONS.perfect;
-  });
-
-  // -------- UPDATE PROGRESS --------
-  updateBtn.addEventListener("click", () => {
-    const todayHours = Number(todayHoursIn.value);
-    if (isNaN(todayHours) || todayHours < 0) return;
-
-    const days = daysLeftTillMarch29();
-    const todayTarget = days > 0 ? remainingHours / days : remainingHours;
-
-    remainingHours -= todayHours;
-    if (remainingHours < 0) remainingHours = 0;
-
-    const nextTarget =
-      days > 1 ? remainingHours / (days - 1) : remainingHours;
-
-    if (todayHours < todayTarget) {
-      statusIcon.src = SAFE_ICONS.warning;
-      resultDiv.textContent = "Missed target. Tomorrow increases.";
-    } 
-    else if (todayHours > todayTarget) {
-      statusIcon.src = SAFE_ICONS.success;
-      resultDiv.textContent = "Extra work done! Tomorrow decreases.";
-    } 
-    else {
-      statusIcon.src = SAFE_ICONS.perfect;
-      resultDiv.textContent = "Perfectly on track.";
-    }
-
-    totalHoursEl.textContent  = remainingHours.toFixed(2);
-    daysLeftEl.textContent    = Math.max(days - 1, 0);
-    dailyTargetEl.textContent = nextTarget.toFixed(2);
-  });
+  updateStats();
 
 });
